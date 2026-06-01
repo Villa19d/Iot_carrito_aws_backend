@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Carrito IoT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .status {
+            background: #0f3460;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            color: #00ff88;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .dpad {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .dpad-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: none;
+            font-size: 30px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #e94560;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .btn:active {
+            transform: scale(0.95);
+            background: #ff6b6b;
+        }
+        .btn-stop {
+            background: #dc3545;
+            width: 100px;
+            height: 100px;
+            font-size: 24px;
+        }
+        .btn-stop:active {
+            background: #ff4757;
+        }
+        .section-title {
+            color: white;
+            margin: 20px 0 10px 0;
+            font-size: 18px;
+            border-left: 4px solid #e94560;
+            padding-left: 15px;
+        }
+        .demos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .btn-demo {
+            background: #533483;
+            width: auto;
+            height: auto;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+        .btn-demo:active {
+            background: #7b4fd3;
+        }
+        .movimientos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .btn-mov {
+            background: #0f3460;
+            width: auto;
+            height: auto;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+        .log {
+            background: #0a0a1a;
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            color: #0f0;
+        }
+        .log p {
+            margin: 5px 0;
+            border-bottom: 1px solid #333;
+            padding: 3px 0;
+        }
+        footer {
+            text-align: center;
+            color: #666;
+            margin-top: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 Control Carrito IoT</h1>
+        <div class="subtitle">ESP8266 + WebSocket + API</div>
+        
+        <div class="status" id="status">
+            🔌 Conectando al servidor...
+        </div>
+        
+        <div class="control-panel">
+            <!-- D-Pad -->
+            <div class="dpad">
+                <div class="dpad-row">
+                    <button class="btn" onclick="enviarMovimiento('Adelante')">▲</button>
+                </div>
+                <div class="dpad-row">
+                    <button class="btn" onclick="enviarMovimiento('Giro 90° izquierda')">◀</button>
+                    <button class="btn btn-stop" onclick="enviarMovimiento('Detener')">⏹️</button>
+                    <button class="btn" onclick="enviarMovimiento('Giro 90° derecha')">▶</button>
+                </div>
+                <div class="dpad-row">
+                    <button class="btn" onclick="enviarMovimiento('Atrás')">▼</button>
+                </div>
+            </div>
+            
+            <!-- Movimientos adicionales -->
+            <div class="section-title">📋 Movimientos</div>
+            <div class="movimientos" id="movimientos">
+                <!-- Se llenará con JS -->
+            </div>
+            
+            <!-- Demos -->
+            <div class="section-title">🎬 Demos</div>
+            <div class="demos" id="demos">
+                <!-- Se llenará con JS -->
+            </div>
+            
+            <!-- Último movimiento -->
+            <div class="section-title">📜 Último movimiento</div>
+            <div class="log" id="log">
+                <p>Esperando movimientos...</p>
+            </div>
+        </div>
+        <footer>Universidad IoT - Proyecto Carrito ESP8266</footer>
+    </div>
+
+    <script>
+        const API_URL = 'http://50.16.92.186:5001/api';
+        
+        // Cargar movimientos disponibles
+        async function cargarMovimientos() {
+            try {
+                const response = await fetch(`${API_URL}/movimientos`);
+                const data = await response.json();
+                if (data.success) {
+                    const container = document.getElementById('movimientos');
+                    container.innerHTML = '';
+                    data.data.forEach(mov => {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn-mov';
+                        btn.textContent = mov.nombre_movimiento;
+                        btn.onclick = () => enviarMovimiento(mov.nombre_movimiento);
+                        container.appendChild(btn);
+                    });
+                }
+            } catch (error) {
+                console.error('Error cargando movimientos:', error);
+            }
+        }
+        
+        // Cargar demos disponibles
+        async function cargarDemos() {
+            try {
+                const response = await fetch(`${API_URL}/demos`);
+                const data = await response.json();
+                if (data.success) {
+                    const container = document.getElementById('demos');
+                    container.innerHTML = '';
+                    data.data.forEach(demo => {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn-demo';
+                        btn.textContent = demo.nombre_secuencia;
+                        btn.onclick = () => ejecutarDemo(demo.id_secuencia, demo.nombre_secuencia);
+                        container.appendChild(btn);
+                    });
+                }
+            } catch (error) {
+                console.error('Error cargando demos:', error);
+            }
+        }
+        
+        // Enviar movimiento al carrito
+        async function enviarMovimiento(movimiento) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `📤 Enviando: ${movimiento}...`;
+            statusDiv.style.color = '#ffaa00';
+            
+            try {
+                const response = await fetch(`${API_URL}/enviar_movimiento`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        movimiento: movimiento,
+                        identificador: 'ESP8266-CAR-001'
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    statusDiv.innerHTML = `✅ Movimiento enviado: ${movimiento}`;
+                    statusDiv.style.color = '#00ff88';
+                    setTimeout(() => {
+                        statusDiv.innerHTML = `🟢 Conectado al servidor`;
+                        statusDiv.style.color = '#00ff88';
+                    }, 2000);
+                } else {
+                    statusDiv.innerHTML = `❌ Error: ${data.error}`;
+                    statusDiv.style.color = '#ff4444';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ Error de conexión: ${error.message}`;
+                statusDiv.style.color = '#ff4444';
+            }
+            
+            // Actualizar último movimiento
+            actualizarUltimoMovimiento();
+        }
+        
+        // Ejecutar demo
+        async function ejecutarDemo(demoId, demoNombre) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `🎬 Ejecutando demo: ${demoNombre}...`;
+            statusDiv.style.color = '#ffaa00';
+            
+            try {
+                const response = await fetch(`${API_URL}/ejecutar_demo`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        demo_id: demoId,
+                        demo_nombre: demoNombre,
+                        identificador: 'ESP8266-CAR-001'
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    statusDiv.innerHTML = `✅ ${data.message}`;
+                    statusDiv.style.color = '#00ff88';
+                    setTimeout(() => {
+                        statusDiv.innerHTML = `🟢 Conectado al servidor`;
+                        statusDiv.style.color = '#00ff88';
+                    }, 3000);
+                } else {
+                    statusDiv.innerHTML = `❌ Error: ${data.error}`;
+                    statusDiv.style.color = '#ff4444';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ Error de conexión: ${error.message}`;
+                statusDiv.style.color = '#ff4444';
+            }
+            
+            actualizarUltimoMovimiento();
+        }
+        
+        // Actualizar el log del último movimiento
+        async function actualizarUltimoMovimiento() {
+            try {
+                const response = await fetch(`${API_URL}/ultimo_movimiento`);
+                const data = await response.json();
+                if (data.success && data.data) {
+                    const logDiv = document.getElementById('log');
+                    const newEntry = document.createElement('p');
+                    const fecha = new Date(data.data.fecha_hora).toLocaleTimeString();
+                    newEntry.innerHTML = `🎯 ${data.data.nombre_movimiento} - ${fecha} (PWM: ${data.data.mia_pwm})`;
+                    logDiv.insertBefore(newEntry, logDiv.firstChild);
+                    
+                    // Mantener solo últimos 10
+                    while (logDiv.children.length > 10) {
+                        logDiv.removeChild(logDiv.lastChild);
+                    }
+                }
+            } catch (error) {
+                console.error('Error actualizando último movimiento:', error);
+            }
+        }
+        
+        // Actualizar estado cada 3 segundos
+        setInterval(actualizarUltimoMovimiento, 3000);
+        
+        // Inicializar
+        cargarMovimientos();
+        cargarDemos();
+        actualizarUltimoMovimiento();
+        
+        document.getElementById('status').innerHTML = '🟢 Conectado al servidor';
+        document.getElementById('status').style.color = '#00ff88';
+    </script>
+</body>
+</html>

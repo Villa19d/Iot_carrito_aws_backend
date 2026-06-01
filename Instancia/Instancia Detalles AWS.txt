@@ -1,0 +1,138 @@
+Resumen de instancia
+Información
+ID de la instancia
+i-09b8ab6442018d0e5
+Dirección IPv4 pública
+
+50.16.92.186 | dirección abierta 
+Direcciones IPv4 privadas
+172.31.29.114
+Dirección IPv6
+–
+Estado de la instancia
+En ejecución
+DNS público
+
+ec2-50-16-92-186.compute-1.amazonaws.com | dirección abierta 
+Tipo de nombre de anfitrión
+Nombre de IP: ip-172-31-29-114.ec2.internal
+Nombre DNS de IP privada (solo IPv4)
+ip-172-31-29-114.ec2.internal
+Responder al nombre DNS de recurso privado
+IPv4 (A)
+Tipo de instancia
+t3.micro
+Direcciones IP elásticas
+
+50.16.92.186 (ipFija-WebServer-IoT-Carrito)
+ [IP pública]
+Dirección IP asignada automáticamente
+–
+ID de VPC
+vpc-08bdad66b49026f27 
+Hallazgo de AWS Compute Optimizer
+Suscribirse a AWS Compute Optimizer para recibir recomendaciones.
+|
+Más información 
+Rol de IAM
+–
+ID de subred
+subnet-085687420617d650c 
+Nombre del grupo de Auto Scaling
+–
+IMDSv2
+Required
+ARN de instancia
+arn:aws:ec2:us-east-1:922482165650:instance/i-09b8ab6442018d0e5
+Administradas
+falso
+Operador
+–
+Detalles de la instancia
+Información
+ID de AMI
+
+ami-01a15dfc48279bf55
+Monitoreo
+desactivado
+Detalles de la plataforma
+Windows
+Nombre de AMI
+Windows_Server-2025-English-Full-Base-2026.03.11
+Imagen permitida
+-
+Protección de terminación
+desactivado
+Detener la protección
+desactivado
+Hora de lanzamiento
+Sun May 31 2026 18:51:15 GMT-0600 (hora estándar central) (1 minute)
+Ubicación de AMI
+amazon/Windows_Server-2025-English-Full-Base-2026.03.11
+Migración por reinicio de instancias
+Predeterminada (activado)
+Recuperación automática de instancias
+Predeterminada
+Ciclo de vida
+normal
+Comportamiento de detención de hibernación
+desactivado
+Índice de lanzamiento de AMI
+0
+Par de claves asignado en el lanzamiento
+
+webServerIoT
+Motivo de transición de estado
+–
+Especificación de crédito
+unlimited
+ID de kernel
+–
+Mensaje de transición de estado
+–
+Operación de uso
+RunInstances:0002
+ID de disco RAM
+–
+Propietario
+922482165650
+Compatibilidad con enclaves
+desactivado
+Modo de arranque
+uefi
+Modo de arranque de instancia actual
+uefi
+Permitir etiquetas en los metadatos de la instancia
+desactivado
+Utilizar RBN como nombre de host del SO invitado
+desactivado
+Responder a RBN de DNS de nombre de host IPv4
+Habilitado
+Host y grupo de ubicación
+Información
+ID de alojamiento
+–
+Afinidad
+–
+Grupo de ubicación
+–
+Nombre del grupo de recursos de host
+–
+Tenencia
+default
+ID de grupo de ubicación
+–
+Tipo de virtualización
+hvm
+Reserva
+r-0f63ac7cdad4b47d8
+Número de partición
+–
+Número de CPU virtuales
+2
+Reserva de capacidad
+Información
+ID de reserva de capacidad
+–
+Configuración de reserva de capacidad
+open

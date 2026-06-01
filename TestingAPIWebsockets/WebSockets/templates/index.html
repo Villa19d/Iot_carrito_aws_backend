@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Status</title>
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        #status {
+            font-size: 3rem;
+            margin: 20px;
+        }
+
+        .true {
+            color: green;
+        }
+
+        .false {
+            color: red;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            margin: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Estado en Tiempo Real</h1>
+
+    <div id="status" class="false">false</div>
+
+    <button onclick="setStatus(true)">ON</button>
+    <button onclick="setStatus(false)">OFF</button>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
