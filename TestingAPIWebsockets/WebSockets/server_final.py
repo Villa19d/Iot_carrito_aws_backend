@@ -291,8 +291,26 @@ def ejecutar_demo():
                 except:
                     if client in websocket_clients:
                         websocket_clients.remove(client)
+            
+            # Esperar a que el movimiento termine físicamente
             pausa = (mov['mi_time'] + 150) / 1000.0
             time.sleep(pausa)
+            
+            # INYECCIÓN CRÍTICA: Enviar 'Detener' explícitamente para cancelar la inercia infinita del ESP8266
+            detener_cmd = {
+                'movimiento': 'Detener',
+                'mia_pwm': 0,
+                'mda_pwm': 0,
+                'mi_time': 0
+            }
+            msg_detener = json.dumps({'success': True, 'data': detener_cmd})
+            for client in websocket_clients[:]:
+                try:
+                    client.send(encode_websocket_frame(msg_detener))
+                except:
+                    pass
+            time.sleep(0.1) # Pequeña pausa de estabilización antes del siguiente movimiento
+            
         print("✅ Demo completada")
     
     threading.Thread(target=ejecutar_secuencia, daemon=True).start()
