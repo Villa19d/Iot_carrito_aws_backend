@@ -41,7 +41,7 @@ MOVIMIENTOS_VELOCIDAD_FIJA = {8, 9, 10, 11}  # IDs de giros
 
 # Tiempos especiales (ms) – se mantienen
 TIEMPOS_ESPECIALES = {
-    1: 800,
+    1: 500,  # 0.5s para Adelante (útil para zig zag y cuadrado)
     8: 600,
     9: 600,
     10: 2000,
