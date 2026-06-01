@@ -360,6 +360,15 @@ def handle_websocket(client_socket, address):
             data = client_socket.recv(4096)
             if not data:
                 break
+            if len(data) >= 2:
+                opcode = data[0] & 0x0F
+                if opcode == 0x8:  # Close frame
+                    break
+                elif opcode == 0x9:  # Ping frame, enviar Pong
+                    try:
+                        client_socket.send(bytes([0x8A, 0x00]))
+                    except:
+                        break
     except:
         pass
     finally:
@@ -368,12 +377,27 @@ def handle_websocket(client_socket, address):
         client_socket.close()
         print(f"🔌 ESP8266 desconectado")
 
+def keep_alive():
+    while True:
+        time.sleep(5)
+        for client in websocket_clients[:]:
+            try:
+                # Enviar PING frame para mantener viva la conexión TCP
+                client.send(bytes([0x89, 0x00]))
+            except:
+                if client in websocket_clients:
+                    websocket_clients.remove(client)
+
 def start_websocket_server():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind(('0.0.0.0', 5000))
     server.listen(5)
     print("✅ Servidor WebSocket corriendo en ws://0.0.0.0:5000")
+    
+    # Iniciar hilo de mantenimiento de conexión (Ping)
+    threading.Thread(target=keep_alive, daemon=True).start()
+    
     while True:
         client, addr = server.accept()
         threading.Thread(target=handle_websocket, args=(client, addr), daemon=True).start()
