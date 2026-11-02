@@ -1,9 +1,33 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
-.env
 .venv/
 env/
 venv/
 node_modules/
 .DS_Store
+
+# Environment files (keep the template)
+.env
+.env.*
+!.env.example
+
+# Secrets / keys
+*.pem
+*.key
+
+# AWS instance details (may contain credentials)
+Instancia/
+
+# Database dumps that may contain real data
+Respaldo RDS/
+respaldo_*.sql
+*.sql
+!SQL_Scripts/*.sql
+
+# Utility scripts that embed credentials (run locally, do not version)
+dump_db.py
+rename_demos.py
+update_demos.py
+TestingAPIWebsockets/db_query.py

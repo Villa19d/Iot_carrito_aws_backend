@@ -200,7 +200,9 @@
     </div>
 
     <script>
-        const API_URL = 'http://50.16.92.186:5001/api';
+        // Legacy manual test page. Point API_URL at your backend, e.g.
+        // const API_URL = 'https://your-backend.example.com/api';
+        const API_URL = `${window.location.origin}/api`;
         
         // Cargar movimientos disponibles
         async function cargarMovimientos() {

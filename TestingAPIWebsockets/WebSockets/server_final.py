@@ -1,4 +1,5 @@
 # server_final.py
+import os
 import socket
 import threading
 import json
@@ -11,12 +12,14 @@ from flask_cors import CORS
 import mysql.connector
 
 # ========== CONFIGURACIÓN BD ==========
+# Values come from environment variables (see .env.example). No credentials or
+# host names are hard-coded.
 DB_CONFIG = {
-    'host': 'instancia-iot.cpcio88easmg.us-east-2.rds.amazonaws.com',
-    'user': 'admin',
-    'password': 'izy_BGCquTvR_x5',
-    'database': 'carrito_iot',
-    'port': 3306,
+    'host': os.environ.get('DB_HOST', ''),
+    'user': os.environ.get('DB_USER', ''),
+    'password': os.environ.get('DB_PASSWORD', ''),
+    'database': os.environ.get('DB_NAME', 'carrito_iot'),
+    'port': int(os.environ.get('DB_PORT', '3306')),
     'autocommit': True,
     'charset': 'utf8mb4'
 }
