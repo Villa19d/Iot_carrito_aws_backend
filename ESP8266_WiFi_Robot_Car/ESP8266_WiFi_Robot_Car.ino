@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <WebSocketsClient.h>
+#include "secrets.h"
 
 // ========== CONFIGURACIÓN ==========
 const char* ssid = "iPhone de Villa";
