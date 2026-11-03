@@ -31,3 +31,8 @@ dump_db.py
 rename_demos.py
 update_demos.py
 TestingAPIWebsockets/db_query.py
+
+
+#Script that dont work anymore
+esquema_bd_y_sp.sql
+BD_Contraseñas.txt
