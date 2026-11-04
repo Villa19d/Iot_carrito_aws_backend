@@ -1,5 +1,6 @@
 # server_final.py
 import os
+import asyncio
 import socket
 import threading
 import json
@@ -7,6 +8,7 @@ import hashlib
 import base64
 import re
 import time
+import websockets
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mysql.connector
@@ -54,7 +56,7 @@ TIEMPOS_ESPECIALES = {
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-websocket_clients = []
+websocket_clients = set()   # conexiones WS activas (objetos de la librería `websockets`)
 VELOCIDAD_GLOBAL = 1.0
 
 def get_db_connection():
@@ -177,14 +179,9 @@ def enviar_movimiento():
     }
     mensaje = json.dumps({'success': True, 'data': comando})
     print(f"📤 Enviando: {mensaje}")
-    
-    for client in websocket_clients[:]:
-        try:
-            client.send(encode_websocket_frame(mensaje))
-        except:
-            if client in websocket_clients:
-                websocket_clients.remove(client)
-    
+
+    broadcast(mensaje)
+
     return jsonify({'success': True, 'message': f'Movimiento {nombre_movimiento} enviado'})
 
 @app.route('/api/demos', methods=['GET'])
@@ -288,12 +285,7 @@ def ejecutar_demo():
             }
             mensaje = json.dumps({'success': True, 'data': comando})
             print(f"📤 Demo -> ESP: {mensaje}")
-            for client in websocket_clients[:]:
-                try:
-                    client.send(encode_websocket_frame(mensaje))
-                except:
-                    if client in websocket_clients:
-                        websocket_clients.remove(client)
+            broadcast(mensaje)
             
             # Esperar a que el movimiento termine físicamente
             pausa = (mov['mi_time'] + 150) / 1000.0
@@ -307,11 +299,7 @@ def ejecutar_demo():
                 'mi_time': 0
             }
             msg_detener = json.dumps({'success': True, 'data': detener_cmd})
-            for client in websocket_clients[:]:
-                try:
-                    client.send(encode_websocket_frame(msg_detener))
-                except:
-                    pass
+            broadcast(msg_detener)
             time.sleep(0.1) # Pequeña pausa de estabilización antes del siguiente movimiento
             
         print("✅ Demo completada")
@@ -319,68 +307,44 @@ def ejecutar_demo():
     threading.Thread(target=ejecutar_secuencia, daemon=True).start()
     return jsonify({'success': True, 'message': f'Demo iniciada con {len(movimientos_preparados)} movimientos'})
 
-# ========== WEBSOCKET (igual que antes) ==========
-def encode_websocket_frame(message):
-    message_bytes = message.encode('utf-8')
-    length = len(message_bytes)
-    frame = bytearray()
-    frame.append(0x81)
-    if length <= 125:
-        frame.append(length)
-    elif length <= 65535:
-        frame.append(126)
-        frame.extend(length.to_bytes(2, 'big'))
-    else:
-        frame.append(127)
-        frame.extend(length.to_bytes(8, 'big'))
-    frame.extend(message_bytes)
-    return bytes(frame)
+# ========== WEBSOCKET (librería estándar `websockets`) ==========
+# Se reemplaza el servidor de socket crudo por la librería `websockets`.
+# Motivo: Cloudflare Tunnel proxea WebSockets correctamente con servidores
+# estándar; el handshake manual (socket crudo) daba 502 a través del túnel.
+_ws_loop = None   # event loop que ejecuta el servidor WS
 
-def handle_websocket(client_socket, address):
-    global websocket_clients
+async def _ws_handler(ws):
+    websocket_clients.add(ws)
+    print(f"🔌 Cliente WS conectado desde {ws.remote_address}")
     try:
-        request = client_socket.recv(1024).decode('utf-8')
-        key_pattern = r'Sec-WebSocket-Key: (.*)'
-        key_match = re.search(key_pattern, request)
-        if not key_match:
-            client_socket.close()
-            return
-        key = key_match.group(1).strip()
-        GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-        combined = key + GUID
-        sha1 = hashlib.sha1(combined.encode('utf-8'))
-        accept = base64.b64encode(sha1.digest()).decode('utf-8')
-        response = (
-            "HTTP/1.1 101 Switching Protocols\r\n"
-            "Upgrade: websocket\r\n"
-            "Connection: Upgrade\r\n"
-            f"Sec-WebSocket-Accept: {accept}\r\n\r\n"
-        )
-        client_socket.send(response.encode('utf-8'))
-        websocket_clients.append(client_socket)
-        print(f"🔌 ESP8266 conectado desde {address}")
-        while True:
-            data = client_socket.recv(4096)
-            if not data:
-                break
-    except:
+        async for _ in ws:      # el cliente (ESP8266 / navegador) solo recibe
+            pass
+    except Exception:
         pass
     finally:
-        if client_socket in websocket_clients:
-            websocket_clients.remove(client_socket)
-        client_socket.close()
-        print(f"🔌 ESP8266 desconectado")
+        websocket_clients.discard(ws)
+        print("🔌 Cliente WS desconectado")
+
+async def _serve_ws():
+    global _ws_loop
+    _ws_loop = asyncio.get_running_loop()
+    async with websockets.serve(_ws_handler, "0.0.0.0", 5000):
+        print("✅ Servidor WebSocket (librería websockets) en ws://0.0.0.0:5000")
+        await asyncio.Future()   # correr para siempre
 
 def start_websocket_server():
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind(('0.0.0.0', 5000))
-    server.listen(5)
-    print("✅ Servidor WebSocket corriendo en ws://0.0.0.0:5000")
-    
-    while True:
-        client, addr = server.accept()
-        threading.Thread(target=handle_websocket, args=(client, addr), daemon=True).start()
+    asyncio.run(_serve_ws())
+
+def broadcast(message):
+    """Envía `message` (str JSON) a todos los clientes WS conectados.
+    Thread-safe: se puede llamar desde los threads de Flask."""
+    if _ws_loop is None or not websocket_clients:
+        return
+    for ws in list(websocket_clients):
+        try:
+            asyncio.run_coroutine_threadsafe(ws.send(message), _ws_loop)
+        except Exception:
+            websocket_clients.discard(ws)
 
 if __name__ == '__main__':
     cargar_velocidad_global()
