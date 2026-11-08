@@ -3,18 +3,15 @@
 #include "secrets.h"
 
 // ========== CONFIGURACIÓN ==========
-const char* ssid = "iPhone de Villa";
-const char* password = "Contraseña";
-// const char* ssid = "TELECABLE-F2E0";
-const char* password = "Contraseña";
 
-// const char* ssid = "WIFI-ALUMNOS";
-const char* password = "Contraseña";
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PASSWORD;
 
 
 
-const char* ws_host = "50.16.92.186";
-const uint16_t ws_port = 5000;
+
+const char* ws_host = WS_HOST;
+const uint16_t ws_port = WS_PORT;
 
 #define IN_2 4
 #define IN_1 14

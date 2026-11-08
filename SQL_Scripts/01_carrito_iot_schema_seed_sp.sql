@@ -372,6 +372,10 @@ CREATE TABLE `secuencias_demo` (
 LOCK TABLES `secuencias_demo` WRITE;
 /*!40000 ALTER TABLE `secuencias_demo` DISABLE KEYS */;
 INSERT INTO `secuencias_demo` VALUES (1,'Zig Zag','Secuencia para esquivar obstáculos'),(3,'Cuadrado','Recorrido de un cuadrado'),(4,'Estacionar','Maniobra para estacionar'),(5,'Giro en U','Giro de 180 grados'),(6,'Baile','Secuencia divertida'),(7,'Demo Final','Prueba de funcionamiento'),(9,'Testing','Secuencia para esquivar obstáculos');
+USE carrito_iot;
+INSERT INTO detalle_secuencia_demo (id_secuencia, id_movimiento, orden_ejecucion) VALUES
+(1, 1, 1),(1, 8, 2),(1, 1, 3),(1, 9, 4),(1, 1, 5);
+
 /*!40000 ALTER TABLE `secuencias_demo` ENABLE KEYS */;
 UNLOCK TABLES;
 

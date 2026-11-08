@@ -36,7 +36,7 @@ La solución se compone de tres elementos principales:
 
 A continuación se documentan los endpoints HTTP y eventos WebSocket expuestos por el Back-end para la solución IoT.
 
-**Servidor Base:** `http://50.16.92.186:5001`
+**Servidor Base:** `http://<OLD_IP>:5001`
 
 ### 1. API HTTP: Lista de Movimientos (`GET /api/movimientos`)
 - **Descripción:** Devuelve el catálogo de los 11 movimientos disponibles con sus nombres e IDs.
@@ -90,7 +90,7 @@ A continuación se documentan los endpoints HTTP y eventos WebSocket expuestos p
 - **Stored Procedures vinculados a DEMO:** `sp_crear_demo`, `sp_agregar_movimiento_a_demo`, `sp_repetir_demo`
 
 ### 6. Comunicación WebSocket (IoT - Tiempo Real)
-- **Servidor Base:** `ws://50.16.92.186:5000`
+- **Servidor Base:** `ws://<OLD_IP>:5000`
 - **Descripción:** Protocolo nativo (RFC 6455). El servidor envía directamente los comandos de hardware al ESP8266. El ESP8266 ejecuta el comando en sus motores físicos y se detiene según el tiempo (`mi_time`).
   ```json
   {

@@ -16,6 +16,7 @@ node_modules/
 # Secrets / keys
 *.pem
 *.key
+secrets.h
 
 # AWS instance details (may contain credentials)
 Instancia/
@@ -33,6 +34,7 @@ update_demos.py
 TestingAPIWebsockets/db_query.py
 
 
-#Script that dont work anymore
-esquema_bd_y_sp.sql
+# Local-only files that must never be versioned
 BD_Contraseñas.txt
+
+secrets.h

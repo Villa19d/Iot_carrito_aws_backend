@@ -5,26 +5,28 @@ API** (Flask, port `5001`) for the web panel and a **native WebSocket server**
 (port `5000`) that delivers real-time movement commands to the car. Data lives in
 **MySQL** and is accessed exclusively through **stored procedures**.
 
-> **Honest status:** this backend originally ran on a temporary **AWS Academy**
-> lab (EC2 + RDS). That lab is **closed**, so the live deployment no longer
-> exists. The code and schema are kept as a reference and to be re-hosted. All
-> credentials/hosts have been replaced by environment variables.
+> **Status (Nov 2026):** this backend was **re-deployed in November 2026** on an
+> **AWS lab** (EC2 + **Amazon RDS for MySQL**) — the original exam delivery was
+> `01/06/2026`. The live infrastructure is expected to stay up until
+> **[CONFIRMAR fecha]**; after that the frontend falls back to its in-browser
+> **demo mode**. All credentials/hosts are read from environment variables
+> (never committed).
 
 ---
 
-## Architecture (original AWS deployment)
+## Architecture
 
 ```mermaid
 flowchart LR
     subgraph HW["Hardware"]
         ESP["ESP8266 WiFi Robot Car"]
     end
-    subgraph AWS["AWS Academy lab (closed)"]
+    subgraph AWS["AWS lab (re-deployed Nov 2026)"]
         FLASK["Flask backend on EC2<br/>REST :5001 + WebSocket :5000"]
-        RDS[("MySQL on Amazon RDS<br/>stored procedures sp_*")]
+        RDS[("Amazon RDS for MySQL<br/>stored procedures sp_*")]
     end
     subgraph WEB["Frontend"]
-        REACT["React (GitHub Pages)"]
+        REACT["React (Vercel)"]
     end
     REACT -- "GET/POST /api/* (HTTP)" --> FLASK
     FLASK <-- "WebSocket RFC 6455 :5000" --> ESP
@@ -41,8 +43,10 @@ TestingAPIWebsockets/WebSockets/
   model/movimiento.py    # movements/obstacles model (stored-procedure calls)
   controller/            # movement + status controllers
   app.py                 # legacy minimal WebSocket-only server
-  socket_server.py       # legacy native WebSocket server (action-based messages)
-SQL_Scripts/esquema_bd_y_sp.sql   # schema + stored procedures (no seed data)
+  websocket/socket_server.py   # legacy native WebSocket server (action-based messages)
+SQL_Scripts/01_carrito_iot_schema_seed_sp.sql  # full DB bootstrap: CREATE DATABASE +
+                                               # 11 tables + seed data + 14 stored procedures
+                                               # (incl. the ESP8266 fix sp_ultimo_movimiento_esp)
 ```
 
 ---
@@ -82,8 +86,10 @@ explicit `Detener` after each step to cancel the car's inertia.
 
 ## WebSocket protocol
 
-- **Endpoint:** `ws://<host>:5000` — a hand-rolled RFC 6455 server (manual
-  handshake, no external library) implemented in `server_final.py`.
+- **Endpoint:** `ws://<host>:5000` — implemented with the standard **`websockets`**
+  library (`server_final.py`). A standard handshake is required so the
+  **Cloudflare Tunnel** can proxy **WSS** to browsers (the earlier hand-rolled
+  server produced `502`).
 - **Direction:** server → device (and server → web panel for realtime updates).
 - **Frame payload (JSON):**
 
@@ -111,7 +117,8 @@ the frontend and the demo used.
 
 ## Database & stored procedures
 
-Schema and procedures are in `SQL_Scripts/esquema_bd_y_sp.sql`. Tables:
+The complete database (schema + seed data + stored procedures) is in
+`SQL_Scripts/01_carrito_iot_schema_seed_sp.sql`. Tables:
 `cat_movimientos`, `config_motor_movimiento`, `secuencias_demo`,
 `detalle_secuencia_demo`, `movimientos_registrados`, `dispositivos`,
 `obstaculos_registrados`, `cat_estatus_obstaculo`, `telemetria_dispositivo`,
@@ -169,27 +176,67 @@ python server_final.py
 
 ## Firmware
 
-`[TODO_CONTENT]` — the **ESP8266 firmware that speaks the WebSocket protocol is
-not in this repository**. The `.ino` shipped in the project folder is the vendor
-example (plain HTTP over a Wi-Fi access point, `ESP8266WebServer`), not the
-WebSocket client used by this backend.
+The **ESP8266 WebSocket client** lives in
+[`firmware/esp8266_ws_client/`](firmware/esp8266_ws_client) (main sketch:
+`esp8266_ws_client.ino`). It uses `WebSocketsClient` to connect to
+`ws://<ELASTIC_IP>:5000`, parses the JSON command (`movimiento`, `mia_pwm`,
+`mda_pwm`, `mi_time`) and drives the motors.
+
+Wi-Fi credentials and the WebSocket host are **not** hard-coded in the sketch:
+they are read from `secrets.h`, which is **gitignored**. Copy the template and
+fill it in:
+
+```bash
+cd firmware/esp8266_ws_client
+cp secrets.example.h secrets.h     # then edit WIFI_SSID / WIFI_PASSWORD / WS_HOST
+```
 
 ---
 
-## Files that should be removed from version control
+## Infrastructure (summary)
 
-These are currently tracked but embed credentials or are local artifacts. They
-were **not** deleted — remove them with `git rm --cached <file>` when convenient:
+> 📄 Full technical document: **[`DEPLOYMENT.md`](DEPLOYMENT.md)**
 
-- `dump_db.py` — embeds DB credentials
-- `rename_demos.py` — embeds DB credentials
-- `update_demos.py` — embeds DB credentials
-- `TestingAPIWebsockets/db_query.py` — embeds DB credentials
-- `Instancia/Instancia Detalles AWS.txt` — instance details / credentials
-- `__pycache__/*.pyc` — build artifacts
-- `TestingAPIWebsockets/WebSockets/venv/**` — local virtualenv
+| Component | Detail |
+|---|---|
+| **Compute** | AWS **EC2** (Amazon Linux 2023) with **Elastic IP** and **IPv6** enabled |
+| **Service** | `carrito-api` (systemd) → Flask **:5001** + WebSocket **:5000** |
+| **Database** | **Amazon RDS for MySQL** (database `carrito_iot`) |
+| **Exposure** | **Cloudflare Tunnel** → `carrito-api.rodrigodvillar.com` (REST) and `carrito-ws.rodrigodvillar.com` (WSS) |
+| **Network** | AWS VPC and subnets + Security Group (22, 5000, 5001, ICMPv6) |
 
-`config.py` and `server_final.py` no longer embed credentials (they read
-environment variables), so they are safe to keep. See `.gitignore` for the
-patterns added to prevent re-committing these files.
+**IPv6 (observation, unconfirmed hypothesis):** the ESP8266 **did not connect** over an
+**iPhone hotspot** but **did over the home Wi-Fi**. **Hypothesis (unconfirmed):** the hotspot
+was **IPv6-first** while the firmware uses an **IPv4** address. IPv6 is kept on the instance and
+`::/0` rules in the Security Group, but this alone does **not** guarantee the ESP connection
+(which uses IPv4).
+
+### How it connects
+```
+ESP8266   ── ws://<ELASTIC_IP>:5000 ─────────────────► EC2 :5000  (websockets server)
+Browser   ── wss://carrito-ws.rodrigodvillar.com ────► Cloudflare Tunnel ► EC2 :5000
+Browser   ── https://carrito-api.rodrigodvillar.com/api ► Cloudflare Tunnel ► EC2 :5001 (Flask)
+                                                          Flask ► MySQL (Amazon RDS)
+```
+
+### Quick commands
+```bash
+sudo systemctl status carrito-api            # is it running?
+sudo journalctl -u carrito-api -f            # live logs
+curl -s https://carrito-api.rodrigodvillar.com/api/movimientos
+```
+
+---
+
+## ⚠️ Limitations (demo, not production)
+
+- **No authentication:** the API validates no users/tokens; anyone with the URL could send
+  commands to the car.
+- **Exposed ports:** the Security Group opens **5000/5001**. Recommended: **close 5001** (the
+  browser uses the Cloudflare Tunnel) and keep **5000** only for the ESP8266.
+- **Not production-ready:** Flask dev server + `websockets`, no native TLS (provided by
+  Cloudflare Tunnel).
+- **Firmware:** continuous movements (**Adelante / Atrás**) are **not stopped by the firmware if
+  the WebSocket connection is lost** — a client-side safety timeout would be required.
+- The physical car stays **disconnected** except while recording.
 

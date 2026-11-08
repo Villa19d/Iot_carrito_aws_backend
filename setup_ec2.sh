@@ -25,7 +25,7 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/Villa19d/Iot_carrito_aws_backend.git"
-BRANCH="feat/portfolio-demo"
+BRANCH="main"
 APP_DIR="/home/ec2-user/Carrito_backend"
 WS_DIR="$APP_DIR/TestingAPIWebsockets/WebSockets"
 SERVICE="carrito-api"
